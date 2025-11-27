@@ -50,6 +50,14 @@ jobs:
         flags: unittests
         name: codecov-umbrella
 
+    - name: Upload test results
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-results
+        path: |
+          htmlcov/
+          coverage.xml
+
   quality-gate:
     runs-on: ubuntu-latest
     needs: test
@@ -57,10 +65,18 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        pip install radon
+    
     - name: Run quality gates
       run: |
         echo "Running Quality Gates..."
-        # Можна додати власні скрипти для ML-аналізу якості
         python quality_gate.py
 
   security-scan:
@@ -69,13 +85,81 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
     
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
     - name: Run security scan
       run: |
         pip install bandit
-        bandit -r calculator.py -f json
+        bandit -r . -f json -o bandit-results.json
         
     - name: Upload security report
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: security-report
         path: bandit-results.json
+        retention-days: 30
+
+  ml-analysis:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.10'
+    
+    - name: Install ML analysis tools
+      run: |
+        pip install radon pylint
+        
+    - name: Generate ML metrics report
+      run: |
+        echo "🔍 GENERATING ML CODE METRICS"
+        echo "=============================="
+        
+        echo "1. CODE COMPLEXITY ANALYSIS:"
+        radon cc calculator.py -s
+        
+        echo "2. MAINTAINABILITY INDEX:"
+        radon mi calculator.py -s
+        
+        echo "3. RAW METRICS:"
+        radon raw calculator.py -s
+        
+        echo "4. HALSTEAD METRICS:"
+        radon hal calculator.py
+        
+        echo "✅ ML ANALYSIS COMPLETED"
+
+    - name: Upload ML report
+      uses: actions/upload-artifact@v4
+      with:
+        name: ml-metrics-report
+        path: .
+        include: |
+          *.py
+        retention-days: 30
+
+  deploy-docs:
+    runs-on: ubuntu-latest
+    needs: [test, quality-gate, security-scan]
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    
+    - name: Generate documentation
+      run: |
+        echo "📚 Generating documentation..."
+        # Тут може бути генерація документації
+        echo "Documentation would be deployed here"
+        
+    - name: Success notification
+      run: |
+        echo "✅ ALL CHECKS PASSED - READY FOR DEPLOYMENT"
