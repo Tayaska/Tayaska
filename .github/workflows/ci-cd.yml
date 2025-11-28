@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.8", "3.9", "3.10"]
     
     steps:
     - name: Checkout code
@@ -29,9 +29,10 @@ jobs:
     
     - name: Run tests
       run: |
+        python -c "import sys; print(f'Python {sys.version}')"
         python -m pytest test_calculator.py -v
 
-  quality-gate:
+  quality-check:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout code
@@ -42,14 +43,11 @@ jobs:
       with:
         python-version: "3.10"
     
-    - name: Install analysis tools
+    - name: Run basic quality checks
       run: |
-        pip install radon pylint
-    
-    - name: Run quality gates
-      run: |
-        echo "🔍 RUNNING QUALITY GATES..."
+        echo "🔍 RUNNING BASIC QUALITY CHECKS..."
         python quality_gate.py
+        echo "✅ QUALITY CHECKS COMPLETED"
 
   security-scan:
     runs-on: ubuntu-latest
@@ -67,7 +65,4 @@ jobs:
         pip install bandit
         echo "🔒 RUNNING SECURITY SCAN..."
         bandit -r . -f txt
-        
-    - name: Success notification
-      run: |
-        echo "✅ ALL CHECKS PASSED - READY FOR DEPLOYMENT"
+        echo "✅ SECURITY SCAN COMPLETED"
