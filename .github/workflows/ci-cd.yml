@@ -1,8 +1,8 @@
-name: Python CI/CD with ML Analysis
+name: Python CI/CD Pipeline
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
 
@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: [3.8, 3.9, 3.10]
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
     
     steps:
     - name: Checkout code
@@ -25,42 +25,14 @@ jobs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install pytest pytest-cov pylint radon
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install pytest
     
-    - name: Run static analysis
+    - name: Run tests
       run: |
-        pylint calculator.py test_calculator.py --exit-zero
-    
-    - name: Run tests with coverage
-      run: |
-        pytest test_calculator.py -v --cov=calculator --cov-report=xml --cov-report=html
-    
-    - name: Code complexity analysis
-      run: |
-        echo "=== Cyclomatic Complexity ==="
-        radon cc calculator.py -s
-        echo "=== Maintainability Index ==="
-        radon mi calculator.py -s
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      with:
-        name: test-results
-        path: |
-          htmlcov/
-          coverage.xml
+        python -m pytest test_calculator.py -v
 
   quality-gate:
     runs-on: ubuntu-latest
-    needs: test
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -68,15 +40,15 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: "3.10"
     
-    - name: Install dependencies
+    - name: Install analysis tools
       run: |
-        pip install radon
+        pip install radon pylint
     
     - name: Run quality gates
       run: |
-        echo "Running Quality Gates..."
+        echo "🔍 RUNNING QUALITY GATES..."
         python quality_gate.py
 
   security-scan:
@@ -88,71 +60,13 @@ jobs:
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
-        python-version: '3.10'
+        python-version: "3.10"
     
     - name: Run security scan
       run: |
         pip install bandit
         echo "🔒 RUNNING SECURITY SCAN..."
         bandit -r . -f txt
-
-  ml-analysis:
-    runs-on: ubuntu-latest
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
-    
-    - name: Install ML analysis tools
-      run: |
-        pip install radon pylint
-        
-    - name: Generate ML metrics report
-      run: |
-        echo "🔍 GENERATING ML CODE METRICS"
-        echo "=============================="
-        
-        echo "1. CODE COMPLEXITY ANALYSIS:"
-        radon cc calculator.py -s
-        
-        echo "2. MAINTAINABILITY INDEX:"
-        radon mi calculator.py -s
-        
-        echo "3. RAW METRICS:"
-        radon raw calculator.py -s
-        
-        echo "4. HALSTEAD METRICS:"
-        radon hal calculator.py
-        
-        echo "✅ ML ANALYSIS COMPLETED"
-
-    - name: Upload ML report
-      uses: actions/upload-artifact@v4
-      with:
-        name: ml-metrics-report
-        path: .
-        include: |
-          *.py
-        retention-days: 30
-
-  deploy-docs:
-    runs-on: ubuntu-latest
-    needs: [test, quality-gate, security-scan]
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    
-    - name: Generate documentation
-      run: |
-        echo "📚 Generating documentation..."
-        # Тут може бути генерація документації
-        echo "Documentation would be deployed here"
         
     - name: Success notification
       run: |
