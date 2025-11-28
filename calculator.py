@@ -3,9 +3,6 @@ Secure Calculator implementation
 Passes Bandit security scan
 """
 
-import math
-import logging
-
 class Calculator:
     def add(self, a, b):
         return a + b
@@ -24,7 +21,6 @@ class Calculator:
             result *= i
         return result
     
-    # Додаємо відсутні методи
     def divide(self, a, b):
         """Divide two numbers with zero division check"""
         if b == 0:
